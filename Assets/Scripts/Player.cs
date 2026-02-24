@@ -1,6 +1,7 @@
 using StarterAssets;
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 
 public class Player : MonoBehaviour
@@ -11,6 +12,9 @@ public class Player : MonoBehaviour
     private float timeShot = -1f;
     private const int ANIMATION_lAYER_SHOOT = 1;
     private int myScore, otherScore;
+
+    public TMP_Text scoreText;
+    public TMP_Text comScoreText;
 
     public Ball BallAttachedToPlayer { get => ballAttachedToPlayer; set=>ballAttachedToPlayer = value; }
 
@@ -59,10 +63,12 @@ public class Player : MonoBehaviour
     public void IncreaseMyScore()
     {
         myScore++;
+        scoreText.text = "Player: " + myScore.ToString();
     }
 
     public void IncreaseOtherScore()
     {
         otherScore++;
+        comScoreText.text = "COM: " + otherScore.ToString();
     }
 }
