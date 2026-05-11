@@ -15,6 +15,7 @@ public class Player : MonoBehaviour
     private int myScore, otherScore;
     private CharacterController controller;
     private float distanceSinceLastDribble;
+    public float shootingPower;
 
     public TMP_Text scoreText;
     public TMP_Text comScoreText;
@@ -66,16 +67,11 @@ public class Player : MonoBehaviour
         float speed = new Vector3(controller.velocity.x, 0, controller.velocity.z).magnitude;
 
         if (_input.shoot)
+            Shoot();
+
+        if (timeShot > 0f)
         {
-            _input.shoot = false;
-            timeShot = Time.time;
-            animator.Play("Shoot", ANIMATION_lAYER_SHOOT, 0f);
-            animator.SetLayerWeight(ANIMATION_lAYER_SHOOT, 1f);
-            //Debug.Log("Shoot is fired! The input works!");
-        }
-        if (timeShot > 0f) {
-            //Shoot the ball
-            if (ballAttachedToPlayer != null && Time.time - timeShot >0.2)
+            if (ballAttachedToPlayer != null && Time.time - timeShot > 0.2)
             {
                 src.PlayOneShot(kick);
 
@@ -84,14 +80,12 @@ public class Player : MonoBehaviour
                 Rigidbody rigidbody = ballAttachedToPlayer.transform.gameObject.GetComponent<Rigidbody>();
                 Vector3 shootdirection = transform.forward;
                 shootdirection.y += 0.2f;
-                rigidbody.AddForce(shootdirection * 20f, ForceMode.Impulse);
+                rigidbody.AddForce(shootdirection * (10 + shootingPower * 20f), ForceMode.Impulse);
                 ballAttachedToPlayer = null;
             }
-            //Finish kicking animation
-            if(Time.time - timeShot > 0.5)
-            {
+
+            if (Time.time - timeShot > 0.5)
                 timeShot = -1f;
-            }
         }
         else
         {
@@ -107,6 +101,24 @@ public class Player : MonoBehaviour
                 distanceSinceLastDribble = 0;
             }
         }
+    }
+
+    public void LoseBall()
+    {
+        ballAttachedToPlayer = null;
+    }
+
+    public void Shoot()
+    {
+        _input.shoot = false;
+        timeShot = Time.time;
+        animator.Play("Shoot", ANIMATION_lAYER_SHOOT, 0f);
+        animator.SetLayerWeight(ANIMATION_lAYER_SHOOT, 1f);
+    }
+
+    public void Pass()
+    {
+
     }
 
     public void IncreaseMyScore()
