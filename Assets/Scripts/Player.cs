@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Audio;
+using UnityEngine.UI;
 
 public class Player : MonoBehaviour
 {
@@ -19,6 +20,8 @@ public class Player : MonoBehaviour
 
     public TMP_Text scoreText;
     public TMP_Text comScoreText;
+    public TMP_Text powerText;
+    public Slider powerSlider;
 
     public AudioMixer mixer;
     AudioSource src;
@@ -50,7 +53,6 @@ public class Player : MonoBehaviour
         mixer.SetFloat("volume_ambient", volume_ambient);
     }
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         SaveSettings();
@@ -59,6 +61,27 @@ public class Player : MonoBehaviour
         animator = GetComponent<Animator>();
         src = GetComponent<AudioSource>();
         controller = GetComponent<CharacterController>();
+
+        if (powerSlider != null)
+        {
+            powerSlider.minValue = 0f;
+            powerSlider.maxValue = 1f;
+            powerSlider.value = shootingPower;
+            powerSlider.onValueChanged.AddListener(OnPowerChanged);
+            UpdatePowerText(shootingPower);
+        }
+    }
+
+    void OnPowerChanged(float value)
+    {
+        shootingPower = value;
+        UpdatePowerText(value);
+    }
+
+    void UpdatePowerText(float value)
+    {
+        if (powerText != null)
+            powerText.text = "Power: " + Mathf.RoundToInt(value * 100) + "%";
     }
 
     // Update is called once per frame
