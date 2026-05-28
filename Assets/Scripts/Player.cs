@@ -16,7 +16,9 @@ public class Player : MonoBehaviour
     private int myScore, otherScore;
     private CharacterController controller;
     private float distanceSinceLastDribble;
+    private Vector3 startPos;
     public float shootingPower;
+    public float passForce = 8f;
 
     public TMP_Text scoreText;
     public TMP_Text comScoreText;
@@ -39,6 +41,7 @@ public class Player : MonoBehaviour
 
     void SaveSettings()
     {
+        if (mixer == null) return;
         mixer.GetFloat("volume_master", out volume_master);
         mixer.GetFloat("volume_music", out volume_music);
         mixer.GetFloat("volume_sfx", out volume_sfx);
@@ -47,6 +50,7 @@ public class Player : MonoBehaviour
 
     void RestoreSettings()
     {
+        if (mixer == null) return;
         mixer.SetFloat("volume_master", volume_master);
         mixer.SetFloat("volume_music", volume_music);
         mixer.SetFloat("volume_sfx", volume_sfx);
@@ -61,6 +65,7 @@ public class Player : MonoBehaviour
         animator = GetComponent<Animator>();
         src = GetComponent<AudioSource>();
         controller = GetComponent<CharacterController>();
+        startPos = transform.position;
 
         if (powerSlider != null)
         {
@@ -87,10 +92,9 @@ public class Player : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        float speed = new Vector3(controller.velocity.x, 0, controller.velocity.z).magnitude;
+        if (Game.Instance != null && Game.Instance.IsMatchOver) return;
 
-        if (_input.shoot)
-            Shoot();
+        float speed = new Vector3(controller.velocity.x, 0, controller.velocity.z).magnitude;
 
         if (timeShot > 0f)
         {
@@ -131,9 +135,15 @@ public class Player : MonoBehaviour
         ballAttachedToPlayer = null;
     }
 
+    public void ResetPosition()
+    {
+        controller.enabled = false;
+        transform.position = startPos;
+        controller.enabled = true;
+    }
+
     public void Shoot()
     {
-        _input.shoot = false;
         timeShot = Time.time;
         animator.Play("Shoot", ANIMATION_lAYER_SHOOT, 0f);
         animator.SetLayerWeight(ANIMATION_lAYER_SHOOT, 1f);
@@ -141,7 +151,12 @@ public class Player : MonoBehaviour
 
     public void Pass()
     {
-
+        if (ballAttachedToPlayer == null) return;
+        src.PlayOneShot(kick);
+        ballAttachedToPlayer.StickToPlayer = false;
+        Rigidbody rb = ballAttachedToPlayer.GetComponent<Rigidbody>();
+        rb.AddForce(transform.forward * passForce, ForceMode.Impulse);
+        ballAttachedToPlayer = null;
     }
 
     public void IncreaseMyScore()
@@ -149,6 +164,7 @@ public class Player : MonoBehaviour
         src.PlayOneShot(goal);
         myScore++;
         scoreText.text = "Player: " + myScore.ToString();
+        Game.Instance.ReportScore(myScore, otherScore);
     }
 
     public void IncreaseOtherScore()
@@ -156,5 +172,6 @@ public class Player : MonoBehaviour
         src.PlayOneShot(goal);
         otherScore++;
         comScoreText.text = "COM: " + otherScore.ToString();
+        Game.Instance.ReportScore(myScore, otherScore);
     }
 }

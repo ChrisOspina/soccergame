@@ -8,6 +8,23 @@ public class Ball : MonoBehaviour
     public Transform PlayerBallPos;
     private bool stickToPlayer = false;
     public bool StickToPlayer { get => stickToPlayer; set => stickToPlayer = value; }
+
+    public void Respawn()
+    {
+        stickToPlayer = false;
+        playerRef.LoseBall();
+        transform.position = startPos;
+        Rigidbody rb = GetComponent<Rigidbody>();
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+    }
+
+    public void ForceRelease()
+    {
+        if (!stickToPlayer) return;
+        stickToPlayer = false;
+        playerRef.LoseBall();
+    }
     float speed;
     Vector2 previousLocation;
     Vector3 startPos;

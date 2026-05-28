@@ -1,0 +1,42 @@
+UNITY EDITOR TODO
+=================
+Things to set up in the Unity Editor that can't be done in code.
+
+---
+
+[ ] GAME OBJECT (Game.cs)
+    - Assign "Ball" scene object to the "Ball" field
+    - Create a TMP_Text UI element for the match timer, assign to "Timer Text"
+    - Create a TMP_Text UI element for the end result, assign to "Result Text"
+      (starts hidden -- Game.cs will show/hide it automatically)
+    - Adjust "Match Duration" (default: 180 seconds) in inspector if desired
+    - Adjust "Goal Limit" (default: 3) in inspector if desired
+    - Assign the Player GameObject to the "Player" field
+    - Assign the COM Player GameObject to the "Com Player" field
+
+[x] RESTART AFTER MATCH (Game.cs)
+    - Press R reloads the active scene — no editor setup needed
+    - IMPORTANT: Add SampleScene to File > Build Settings > Scenes In Build
+      (even for in-editor Play mode, SceneManager.GetActiveScene().buildIndex
+       works fine as long as the scene is open)
+
+[ ] FIELD BOUNDARY (FieldBoundary.cs)
+    - Create an empty GameObject, name it "FieldBoundary"
+    - Add a Box Collider component → check "Is Trigger"
+    - Add the FieldBoundary script to it
+    - Resize the Box Collider to cover the entire pitch (use Edit Collider button)
+      Make it tall enough (e.g. Size Y = 10) so a lofted ball still triggers exit
+    - When the ball exits the trigger it auto-respawns to center (no goal credited)
+
+[ ] COM PLAYER (COMPlayer.cs)
+    - Create a new GameObject for the COM player (can duplicate the player prefab or use a capsule)
+    - Add a CharacterController component to it
+    - Add the COMPlayer script to it
+    - Assign the "Ball" scene object to the "Ball" field
+    - Assign Goal1's Transform to the "Goal Target" field (this is the player's goal -- where COM shoots)
+    - Tune in inspector if needed:
+        Move Speed   (default: 3.5)  -- player walk=2.0, sprint=5.335
+        Shoot Range  (default: 5.0)  -- distance from ball at which COM will shoot
+        Shoot Force  (default: 15.0) -- impulse strength of COM shot
+        Shoot Cooldown (default: 2.0 seconds)
+

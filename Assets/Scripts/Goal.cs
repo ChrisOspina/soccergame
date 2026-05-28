@@ -27,14 +27,18 @@ public class Goal : MonoBehaviour
         {
             showGoal();
             if (name.Equals("Goal1"))
-            {
                 playerRef.IncreaseMyScore();
-            }
             else if (name.Equals("Goal2"))
-            {
                 playerRef.IncreaseOtherScore();
-            }
+
+            StartCoroutine(RespawnBallAfterDelay(1.5f));
         }
+    }
+
+    private IEnumerator RespawnBallAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        Game.Instance.ResetAfterGoal();
     }
 
     private void showGoal()
