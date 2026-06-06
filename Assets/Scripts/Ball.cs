@@ -7,12 +7,24 @@ public class Ball : MonoBehaviour
     public Transform transformPlayer;
     public Transform PlayerBallPos;
     private bool stickToPlayer = false;
-    public bool StickToPlayer { get => stickToPlayer; set => stickToPlayer = value; }
+    private float releaseTime = -1f;
+    private const float reattachDelay = 0.5f;
+
+    public bool StickToPlayer
+    {
+        get => stickToPlayer;
+        set
+        {
+            if (stickToPlayer && !value)
+                releaseTime = Time.time;
+            stickToPlayer = value;
+        }
+    }
 
     public void Respawn()
     {
         stickToPlayer = false;
-        playerRef.LoseBall();
+        playerRef?.LoseBall();
         transform.position = startPos;
         Rigidbody rb = GetComponent<Rigidbody>();
         rb.linearVelocity = Vector3.zero;
@@ -41,11 +53,14 @@ public class Ball : MonoBehaviour
     {
         if (!stickToPlayer)
         {
-            float distanceToPlayer = Vector3.Distance(transformPlayer.position, transform.position);
-            if (distanceToPlayer < 2.0f)
+            if (Time.time - releaseTime >= reattachDelay)
             {
-                stickToPlayer = true;
-                playerRef.BallAttachedToPlayer = this;
+                float distanceToPlayer = Vector3.Distance(transformPlayer.position, transform.position);
+                if (distanceToPlayer < 2.0f)
+                {
+                    stickToPlayer = true;
+                    playerRef.BallAttachedToPlayer = this;
+                }
             }
         }
         else

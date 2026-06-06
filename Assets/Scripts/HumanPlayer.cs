@@ -28,17 +28,8 @@ public class HumanPlayer : MonoBehaviour
 
         if (_input.shoot)
         {
-            if (playerScript.BallAttachedToPlayer != null)
-            {
-                playerScript.shootingPower = Mathf.Clamp01(playerScript.shootingPower + 0.5f * Time.deltaTime);
-                Game.Instance.SetPowerBar(playerScript.shootingPower);
-            }
-        }
-        else if (playerScript.shootingPower > 0f)
-        {
+            _input.shoot = false;
             playerScript.Shoot();
-            playerScript.shootingPower = 0f;
-            Game.Instance.SetPowerBar(0f);
         }
     }
 }

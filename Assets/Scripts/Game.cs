@@ -6,12 +6,8 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
-using UnityEngine.UI;
-
 public class Game : MonoBehaviour
 {
-    Slider sliderPowerBar;
-    GameObject powerBar;
     public static Game Instance;
 
     public TMP_Text scoreText;
@@ -38,8 +34,6 @@ public class Game : MonoBehaviour
     void Awake()
     {
         Instance = this;
-        powerBar = GameObject.Find("PowerBar");
-        sliderPowerBar = powerBar.GetComponent<Slider>();
     }
 
     void Start()
@@ -54,7 +48,7 @@ public class Game : MonoBehaviour
     {
         if (matchOver)
         {
-            if (Input.GetKeyDown(KeyCode.R))
+            if (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
                 SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
             return;
         }
@@ -111,14 +105,4 @@ public class Game : MonoBehaviour
         if (comPlayer != null) comPlayer.ResetPosition();
     }
 
-    public void SetPowerBar(float value)
-    {
-        if (value <= 0f)
-        {
-            powerBar.SetActive(false);
-            return;
-        }
-        powerBar.SetActive(true);
-        sliderPowerBar.value = value;
-    }
 }

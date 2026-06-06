@@ -13,7 +13,7 @@ public class Goal : MonoBehaviour
 
     void Start()
     {
-        goalText.gameObject.SetActive(false);
+        if (goalText != null) goalText.gameObject.SetActive(false);
     }
 
     void Update()
@@ -38,7 +38,7 @@ public class Goal : MonoBehaviour
     private IEnumerator RespawnBallAfterDelay(float delay)
     {
         yield return new WaitForSeconds(delay);
-        Game.Instance.ResetAfterGoal();
+        Game.Instance?.ResetAfterGoal();
     }
 
     private void showGoal()

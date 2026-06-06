@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Audio;
-using UnityEngine.UI;
 
 public class Player : MonoBehaviour
 {
@@ -17,13 +16,11 @@ public class Player : MonoBehaviour
     private CharacterController controller;
     private float distanceSinceLastDribble;
     private Vector3 startPos;
-    public float shootingPower;
     public float passForce = 8f;
+    public float shootForce = 20f;
 
     public TMP_Text scoreText;
     public TMP_Text comScoreText;
-    public TMP_Text powerText;
-    public Slider powerSlider;
 
     public AudioMixer mixer;
     AudioSource src;
@@ -67,26 +64,6 @@ public class Player : MonoBehaviour
         controller = GetComponent<CharacterController>();
         startPos = transform.position;
 
-        if (powerSlider != null)
-        {
-            powerSlider.minValue = 0f;
-            powerSlider.maxValue = 1f;
-            powerSlider.value = shootingPower;
-            powerSlider.onValueChanged.AddListener(OnPowerChanged);
-            UpdatePowerText(shootingPower);
-        }
-    }
-
-    void OnPowerChanged(float value)
-    {
-        shootingPower = value;
-        UpdatePowerText(value);
-    }
-
-    void UpdatePowerText(float value)
-    {
-        if (powerText != null)
-            powerText.text = "Power: " + Mathf.RoundToInt(value * 100) + "%";
     }
 
     // Update is called once per frame
@@ -107,7 +84,7 @@ public class Player : MonoBehaviour
                 Rigidbody rigidbody = ballAttachedToPlayer.transform.gameObject.GetComponent<Rigidbody>();
                 Vector3 shootdirection = transform.forward;
                 shootdirection.y += 0.2f;
-                rigidbody.AddForce(shootdirection * (10 + shootingPower * 20f), ForceMode.Impulse);
+                rigidbody.AddForce(shootdirection * shootForce, ForceMode.Impulse);
                 ballAttachedToPlayer = null;
             }
 
@@ -164,7 +141,7 @@ public class Player : MonoBehaviour
         src.PlayOneShot(goal);
         myScore++;
         scoreText.text = "Player: " + myScore.ToString();
-        Game.Instance.ReportScore(myScore, otherScore);
+        Game.Instance?.ReportScore(myScore, otherScore);
     }
 
     public void IncreaseOtherScore()
@@ -172,6 +149,6 @@ public class Player : MonoBehaviour
         src.PlayOneShot(goal);
         otherScore++;
         comScoreText.text = "COM: " + otherScore.ToString();
-        Game.Instance.ReportScore(myScore, otherScore);
+        Game.Instance?.ReportScore(myScore, otherScore);
     }
 }
