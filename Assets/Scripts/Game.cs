@@ -10,8 +10,6 @@ public class Game : MonoBehaviour
 {
     public static Game Instance;
 
-    public TMP_Text scoreText;
-    public TMP_Text comScoreText;
     public Ball ball;
     public Player player;
     public COMPlayer comPlayer;

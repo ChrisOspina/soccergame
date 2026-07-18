@@ -5,11 +5,14 @@ using System.Collections;
 public class Goal : MonoBehaviour
 {
     public Player playerRef;
-    public string name;
+    public string goalId;
     public TMP_Text goalText;
     public float goalTextDuration = 3f;
     public float minScale = 0.5f;
     public float maxScale = 1.5f;
+
+    private Coroutine _goalTextCoroutine;
+    private Coroutine _respawnCoroutine;
 
     void Start()
     {
@@ -26,12 +29,13 @@ public class Goal : MonoBehaviour
         if (other.gameObject.CompareTag("Ball"))
         {
             showGoal();
-            if (name.Equals("Goal1"))
-                playerRef.IncreaseMyScore();
-            else if (name.Equals("Goal2"))
+            if (goalId.Equals("Goal1"))
                 playerRef.IncreaseOtherScore();
+            else if (goalId.Equals("Goal2"))
+                playerRef.IncreaseMyScore();
 
-            StartCoroutine(RespawnBallAfterDelay(1.5f));
+            if (_respawnCoroutine != null) StopCoroutine(_respawnCoroutine);
+            _respawnCoroutine = StartCoroutine(RespawnBallAfterDelay(1.5f));
         }
     }
 
@@ -43,8 +47,8 @@ public class Goal : MonoBehaviour
 
     private void showGoal()
     {
-        StopAllCoroutines();
-        StartCoroutine(ShowGoalCoroutine());
+        if (_goalTextCoroutine != null) StopCoroutine(_goalTextCoroutine);
+        _goalTextCoroutine = StartCoroutine(ShowGoalCoroutine());
     }
 
     private IEnumerator ShowGoalCoroutine()

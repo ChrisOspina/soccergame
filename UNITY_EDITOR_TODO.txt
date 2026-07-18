@@ -4,17 +4,19 @@ Things to set up in the Unity Editor that can't be done in code.
 
 ---
 
-[!] POWER BAR CLEANUP -- DO THIS FIRST (power bar was removed from code)
-    - In the Hierarchy, find and DELETE the PowerBar UI GameObject (Canvas > PowerBar or similar)
-    - Also DELETE the Power Text TMP UI element if it exists
-    - On the Player GameObject, the "Shoot Force" field is now visible in the inspector (default: 20).
-      Adjust it to tune shot strength -- no other power bar setup needed.
-
-[ ] PLAYER (HumanPlayer.cs) -- FIXES SHOOTING
+[ ] PLAYER COMPONENT SETUP
     - Select the Player GameObject in the Hierarchy
-    - Inspector > Add Component > search "HumanPlayer" and add it
+    - Add Component > search "HumanPlayer" and add it (enables shoot/pass input)
+    - On the existing Player component, assign:
+        Score Text    -> the TMP_Text UI showing player score (e.g. "Player: 0")
+        Com Score Text -> the TMP_Text UI showing COM score (e.g. "COM: 0")
+        Mixer         -> the AudioMixer asset (if not already assigned)
+        Dribble       -> dribble SFX AudioClip
+        Kick          -> kick SFX AudioClip
+        Goal          -> goal SFX AudioClip
 
 [ ] GAME OBJECT (Game.cs)
+    - Create an empty GameObject, name it "Game", add the Game script
     - Assign "Ball" scene object to the "Ball" field
     - Assign the Player GameObject to the "Player" field
     - Assign the COM Player GameObject to the "Com Player" field
@@ -24,10 +26,11 @@ Things to set up in the Unity Editor that can't be done in code.
     - Adjust "Match Duration" (default: 180 seconds) in inspector if desired
     - Adjust "Goal Limit" (default: 3) in inspector if desired
 
-[ ] COM PLAYER (COMPlayer.cs) -- FIXES FLOATING + ANIMATION
+[ ] COM PLAYER (COMPlayer.cs)
     - Select the COM Player GameObject
     - If it was duplicated from the player prefab, REMOVE these components:
         ThirdPersonController, PlayerInput (they conflict with COMPlayer movement)
+    - Add Component > search "COMPlayer" and add it
     - On the CharacterController component, match the player's settings:
         Center Y  ~0.93
         Height    ~1.8
@@ -36,6 +39,12 @@ Things to set up in the Unity Editor that can't be done in code.
       ground mesh uses (usually Default) -- without this gravity won't reset
     - Assign the "Ball" scene object to the "Ball" field
     - Assign Goal1's Transform to the "Goal Target" field (player's goal -- where COM shoots)
+
+[ ] GOAL INSPECTOR NOTE
+    - Goal.cs now uses "Goal Id" (not "Name") in the inspector
+    - Goal1 = player's net (COM shoots here, COM scores) -- set goalTarget on COMPlayer to Goal1
+    - Goal2 = COM's net (player shoots here, player scores)
+    - Set Goal Id to "Goal1" on the player's net and "Goal2" on the COM's net
 
 [ ] FIELD BOUNDARY (FieldBoundary.cs)
     - Create an empty GameObject, name it "FieldBoundary"

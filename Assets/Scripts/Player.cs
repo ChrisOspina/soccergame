@@ -121,6 +121,7 @@ public class Player : MonoBehaviour
 
     public void Shoot()
     {
+        if (ballAttachedToPlayer == null) return;
         timeShot = Time.time;
         animator.Play("Shoot", ANIMATION_lAYER_SHOOT, 0f);
         animator.SetLayerWeight(ANIMATION_lAYER_SHOOT, 1f);

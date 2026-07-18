@@ -71,13 +71,7 @@ public class Ball : MonoBehaviour
             transform.Rotate(new Vector3(transformPlayer.right.x, 0, transformPlayer.right.z), speed, Space.World);
             previousLocation = currentLocation;
         }
-        if(transform.position.y < -2)
-        {
-            transform.position = startPos;
-            Rigidbody rb = GetComponent<Rigidbody>();
-            rb.linearVelocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
-
-        }
+        if (transform.position.y < -2)
+            Respawn();
     }
 }

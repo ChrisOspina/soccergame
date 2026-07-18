@@ -9,7 +9,7 @@ public class COMPlayer : MonoBehaviour
     public float moveSpeed = 3.5f;
 
     [Header("Shooting")]
-    public float shootRange = 5f;
+    public float shootRange = 2f;
     public float shootForce = 15f;
     public float shootCooldown = 2f;
 
@@ -114,13 +114,14 @@ public class COMPlayer : MonoBehaviour
     void Shoot()
     {
         lastShotTime = Time.time;
-
-        // Knock the ball free if the human player has it
         ball.ForceRelease();
 
         Rigidbody rb = ball.GetComponent<Rigidbody>();
         Vector3 shootDir = (goalTarget.position - ball.transform.position).normalized;
+        shootDir.x += Random.Range(-0.4f, 0.4f);
+        shootDir.z += Random.Range(-0.4f, 0.4f);
         shootDir.y += 0.2f;
+        shootDir = shootDir.normalized;
         rb.linearVelocity = Vector3.zero;
         rb.AddForce(shootDir * shootForce, ForceMode.Impulse);
     }
