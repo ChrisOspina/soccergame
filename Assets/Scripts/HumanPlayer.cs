@@ -23,13 +23,23 @@ public class HumanPlayer : MonoBehaviour
         if (_input.pass)
         {
             _input.pass = false;
-            playerScript.Pass();
+            // Without the ball, the pass button calls for it from whichever AI teammate has it.
+            if (playerScript.BallAttachedToPlayer != null)
+                playerScript.Pass();
+            else
+                playerScript.team?.RequestPass(playerScript);
         }
 
         if (_input.shoot)
         {
             _input.shoot = false;
             playerScript.Shoot();
+        }
+
+        if (_input.switchPlayer)
+        {
+            _input.switchPlayer = false;
+            playerScript.team?.SwitchControlled();
         }
     }
 }

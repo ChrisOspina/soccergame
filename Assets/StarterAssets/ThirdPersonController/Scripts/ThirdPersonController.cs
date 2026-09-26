@@ -130,6 +130,10 @@ namespace StarterAssets
             {
                 _mainCamera = GameObject.FindGameObjectWithTag("MainCamera");
             }
+
+            // Grabbed in Awake (which runs even when this component is disabled) because
+            // AI-controlled players keep receiving footstep animation events.
+            _controller = GetComponent<CharacterController>();
         }
 
         private void Start()
@@ -137,7 +141,6 @@ namespace StarterAssets
             _cinemachineTargetYaw = CinemachineCameraTarget.transform.rotation.eulerAngles.y;
             
             _hasAnimator = TryGetComponent(out _animator);
-            _controller = GetComponent<CharacterController>();
             _input = GetComponent<StarterAssetsInputs>();
 #if ENABLE_INPUT_SYSTEM 
             _playerInput = GetComponent<PlayerInput>();

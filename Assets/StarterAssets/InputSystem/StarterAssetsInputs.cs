@@ -14,6 +14,7 @@ namespace StarterAssets
 		public bool sprint;
 		public bool shoot;
 		public bool pass;
+		public bool switchPlayer;
 
         [Header("Movement Settings")]
 		public bool analogMovement;
@@ -51,6 +52,11 @@ namespace StarterAssets
 			PassInput(value.isPressed);
 		}
 
+		public void OnSwitch(InputValue value)
+		{
+			SwitchInput(value.isPressed);
+		}
+
 		public void OnSprint(InputValue value)
 		{
 			SprintInput(value.isPressed);
@@ -86,6 +92,11 @@ namespace StarterAssets
 		public void PassInput(bool newPassState)
 		{
 			pass = newPassState;
+		}
+
+		public void SwitchInput(bool newSwitchState)
+		{
+			switchPlayer = newSwitchState;
 		}
 
         private void OnApplicationFocus(bool hasFocus)

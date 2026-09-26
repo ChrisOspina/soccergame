@@ -4,8 +4,7 @@ using System.Collections;
 
 public class Goal : MonoBehaviour
 {
-    public Player playerRef;
-    public string goalId;
+    public TeamController scoringTeam;
     public TMP_Text goalText;
     public float goalTextDuration = 3f;
     public float minScale = 0.5f;
@@ -29,10 +28,7 @@ public class Goal : MonoBehaviour
         if (other.gameObject.CompareTag("Ball"))
         {
             showGoal();
-            if (goalId.Equals("Goal1"))
-                playerRef.IncreaseOtherScore();
-            else if (goalId.Equals("Goal2"))
-                playerRef.IncreaseMyScore();
+            scoringTeam?.AddGoal();
 
             if (_respawnCoroutine != null) StopCoroutine(_respawnCoroutine);
             _respawnCoroutine = StartCoroutine(RespawnBallAfterDelay(1.5f));

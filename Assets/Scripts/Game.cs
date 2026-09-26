@@ -11,8 +11,14 @@ public class Game : MonoBehaviour
     public static Game Instance;
 
     public Ball ball;
-    public Player player;
-    public COMPlayer comPlayer;
+    public TeamController playerTeam;
+    public TeamController comTeam;
+
+    [Header("Teammate Spawning")]
+    [Tooltip("The existing scene character each side's 2 extra teammates are cloned from")]
+    public GameObject playerTemplate;
+    public GameObject comTemplate;
+    public float teammateLateralOffset = 6f;
 
     [Header("Match Settings")]
     public float matchDuration = 180f;
@@ -36,10 +42,49 @@ public class Game : MonoBehaviour
 
     void Start()
     {
+        SpawnTeammates();
+
         timeRemaining = matchDuration;
         if (resultText != null)
             resultText.gameObject.SetActive(false);
         UpdateTimerUI();
+    }
+
+    void SpawnTeammates()
+    {
+        SpawnClone(playerTemplate, -teammateLateralOffset);
+        SpawnClone(playerTemplate, teammateLateralOffset);
+        SpawnClone(comTemplate, -teammateLateralOffset);
+        SpawnClone(comTemplate, teammateLateralOffset);
+    }
+
+    void SpawnClone(GameObject template, float lateralOffset)
+    {
+        if (template == null) return;
+
+        Vector3 spawnPos = template.transform.position + template.transform.right * lateralOffset;
+        GameObject clone = Instantiate(template, spawnPos, template.transform.rotation);
+
+        AITeammate ai = clone.GetComponent<AITeammate>();
+        if (ai != null)
+        {
+            ai.formationLateral = lateralOffset;
+            ai.enabled = true;
+        }
+
+        // A clone of the human template inherits whichever character is currently
+        // human-controlled; force every freshly spawned teammate into AI mode so we
+        // don't end up with multiple PlayerInput components fighting over the keyboard.
+        ThirdPersonController tpc = clone.GetComponent<ThirdPersonController>();
+        if (tpc != null) tpc.enabled = false;
+
+#if ENABLE_INPUT_SYSTEM
+        PlayerInput playerInput = clone.GetComponent<PlayerInput>();
+        if (playerInput != null) playerInput.enabled = false;
+#endif
+
+        HumanPlayer human = clone.GetComponent<HumanPlayer>();
+        if (human != null) human.enabled = false;
     }
 
     void Update()
@@ -64,12 +109,12 @@ public class Game : MonoBehaviour
         }
     }
 
-    public void ReportScore(int playerScore, int comScore)
+    public void OnGoalScored()
     {
         if (matchOver) return;
-        latestPlayerScore = playerScore;
-        latestComScore = comScore;
-        if (playerScore >= goalLimit || comScore >= goalLimit)
+        latestPlayerScore = playerTeam != null ? playerTeam.Score : 0;
+        latestComScore = comTeam != null ? comTeam.Score : 0;
+        if (latestPlayerScore >= goalLimit || latestComScore >= goalLimit)
             EndMatch();
     }
 
@@ -99,8 +144,8 @@ public class Game : MonoBehaviour
     public void ResetAfterGoal()
     {
         ball.Respawn();
-        if (player != null) player.ResetPosition();
-        if (comPlayer != null) comPlayer.ResetPosition();
+        playerTeam?.ResetPositions();
+        comTeam?.ResetPositions();
     }
 
 }
