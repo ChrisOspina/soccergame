@@ -7,11 +7,18 @@ public class HumanPlayer : MonoBehaviour
 {
     Player playerScript;
     private StarterAssetsInputs _input;
+    private ThirdPersonController tpc;
 
     void Awake()
     {
         playerScript = GetComponent<Player>();
         _input = GetComponent<StarterAssetsInputs>();
+        tpc = GetComponent<ThirdPersonController>();
+    }
+
+    void OnDisable()
+    {
+        if (tpc != null) tpc.MovementLocked = false;
     }
 
 
@@ -19,6 +26,8 @@ public class HumanPlayer : MonoBehaviour
     void Update()
     {
         if (Game.Instance != null && Game.Instance.IsMatchOver) return;
+
+        if (tpc != null) tpc.MovementLocked = playerScript.IsStunned;
 
         if (_input.pass)
         {
@@ -33,7 +42,11 @@ public class HumanPlayer : MonoBehaviour
         if (_input.shoot)
         {
             _input.shoot = false;
-            playerScript.Shoot();
+            // On defence the shoot button becomes the tackle button.
+            if (playerScript.BallAttachedToPlayer != null)
+                playerScript.Shoot();
+            else
+                playerScript.Tackle();
         }
 
         if (_input.switchPlayer)

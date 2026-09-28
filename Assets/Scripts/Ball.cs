@@ -7,8 +7,16 @@ public class Ball : MonoBehaviour
     public float pickupRadius = 2.0f;
 
     [Header("Tackling")]
-    [Tooltip("How close an opponent must get to the ball carrier to steal the ball")]
+    [Tooltip("How close an opponent must get to the ball carrier to steal the ball automatically")]
     public float tackleRadius = 1.2f;
+    [Tooltip("How close a player must be to the ball carrier for a tackle-button attempt to count")]
+    public float tackleReach = 2f;
+    [Tooltip("Tackle success chance from in front of the carrier")]
+    [Range(0f, 1f)] public float frontTackleChance = 0.85f;
+    [Tooltip("Tackle success chance from the carrier's side")]
+    [Range(0f, 1f)] public float sideTackleChance = 0.6f;
+    [Tooltip("Tackle success chance from behind the carrier (they're shielding the ball)")]
+    [Range(0f, 1f)] public float behindTackleChance = 0.25f;
     [Tooltip("Seconds after gaining the ball during which the carrier can't be tackled (stops instant back-and-forth steals)")]
     public float tackleProtection = 0.75f;
     [Tooltip("Seconds a player who just lost the ball must wait before tackling back (stops tackle ping-pong)")]
@@ -43,9 +51,13 @@ public class Ball : MonoBehaviour
 
     public Player Carrier => stickToPlayer ? attachedPlayer : null;
 
+    // Survives the ball being kicked away, so a goal can be credited to whoever shot/passed it in.
+    public Player LastTouchedBy { get; private set; }
+
     public void Respawn()
     {
         stickToPlayer = false;
+        LastTouchedBy = null;
         if (attachedPlayer != null) SetCarrierCollisions(attachedPlayer, true);
         attachedPlayer?.LoseBall();
         attachedPlayer = null;
@@ -111,10 +123,12 @@ public class Ball : MonoBehaviour
             attachedPlayer.LoseBall();
             lastDispossessed = attachedPlayer;
             dispossessedTime = Time.time;
+            Debug.Log($"STEAL: {player.DebugName} took the ball from {attachedPlayer.DebugName}");
         }
 
         stickToPlayer = true;
         attachedPlayer = player;
+        LastTouchedBy = player;
         attachTime = Time.time;
         player.BallAttachedToPlayer = this;
 
@@ -142,7 +156,7 @@ public class Ball : MonoBehaviour
 
         foreach (Player player in Player.All)
         {
-            if (player.BallLocation == null) continue;
+            if (player.BallLocation == null || player.IsStunned) continue;
 
             float distance = Vector3.Distance(player.transform.position, transform.position);
             if (distance < nearestDistance)
@@ -162,7 +176,7 @@ public class Ball : MonoBehaviour
 
         foreach (Player player in Player.All)
         {
-            if (player == attachedPlayer || player.BallLocation == null) continue;
+            if (player == attachedPlayer || player.BallLocation == null || player.IsStunned) continue;
             if (player.team != null && player.team == attachedPlayer.team) continue;
             if (player == lastDispossessed && Time.time - dispossessedTime < retackleDelay) continue;
 
@@ -175,6 +189,32 @@ public class Ball : MonoBehaviour
         }
 
         return nearest;
+    }
+
+    public enum TackleResult { NoAttempt, Won, Missed }
+
+    // Resolves a tackle button press. NoAttempt means nobody tackleable was in reach, so the tackler isn't punished.
+    public TackleResult TryTackle(Player tackler)
+    {
+        Player carrier = Carrier;
+        if (carrier == null || carrier == tackler || tackler.BallLocation == null) return TackleResult.NoAttempt;
+        if (tackler.team != null && tackler.team == carrier.team) return TackleResult.NoAttempt;
+        if (tackler == lastDispossessed && Time.time - dispossessedTime < retackleDelay) return TackleResult.NoAttempt;
+
+        Vector3 toTackler = tackler.transform.position - carrier.transform.position;
+        toTackler.y = 0f;
+        if (toTackler.magnitude > tackleReach) return TackleResult.NoAttempt;
+
+        // Freshly won balls can't be tackled straight back, but lunging in during that window still whiffs.
+        if (Time.time - attachTime < tackleProtection) return TackleResult.Missed;
+
+        // Front: dot > 0.3, behind: dot < -0.3, otherwise the side.
+        float facing = toTackler.sqrMagnitude > 0.0001f ? Vector3.Dot(carrier.transform.forward, toTackler.normalized) : 1f;
+        float chance = facing > 0.3f ? frontTackleChance : facing < -0.3f ? behindTackleChance : sideTackleChance;
+        if (Random.value > chance) return TackleResult.Missed;
+
+        AttachTo(tackler);
+        return TackleResult.Won;
     }
 
     private void SetCarrierCollisions(Player carrier, bool collide)

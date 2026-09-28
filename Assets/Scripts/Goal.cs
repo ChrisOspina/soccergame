@@ -13,6 +13,8 @@ public class Goal : MonoBehaviour
     private Coroutine _goalTextCoroutine;
     private Coroutine _respawnCoroutine;
 
+    public bool IsShowingGoalText => goalText != null && goalText.gameObject.activeSelf;
+
     void Start()
     {
         if (goalText != null) goalText.gameObject.SetActive(false);
@@ -29,10 +31,23 @@ public class Goal : MonoBehaviour
         {
             showGoal();
             scoringTeam?.AddGoal();
+            LogGoal(other.GetComponentInParent<Ball>());
 
             if (_respawnCoroutine != null) StopCoroutine(_respawnCoroutine);
             _respawnCoroutine = StartCoroutine(RespawnBallAfterDelay(1.5f));
         }
+    }
+
+    private void LogGoal(Ball ball)
+    {
+        Player scorer = ball != null ? ball.LastTouchedBy : null;
+        string score = Game.Instance != null ? Game.Instance.ScoreLine : "";
+        if (scorer == null)
+            Debug.Log($"GOAL for {scoringTeam?.side}! (no player touched it) {score}");
+        else if (scoringTeam != null && scorer.team != null && scorer.team != scoringTeam)
+            Debug.Log($"OWN GOAL by {scorer.DebugName}! Point to {scoringTeam.side}. {score}");
+        else
+            Debug.Log($"GOAL by {scorer.DebugName}! {score}");
     }
 
     private IEnumerator RespawnBallAfterDelay(float delay)

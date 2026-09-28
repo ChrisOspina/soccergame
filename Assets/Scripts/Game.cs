@@ -27,13 +27,25 @@ public class Game : MonoBehaviour
     [Header("Match UI")]
     public TMP_Text timerText;
     public TMP_Text resultText;
+    [Tooltip("Seconds to wait after the goal text disappears before showing the result")]
+    public float resultDelayAfterGoal = 2f;
+
+    [Header("Pause")]
+    public GameObject pausePanel;
+    [Tooltip("Name of the AudioMixer group whose sources keep playing while paused")]
+    public string ambientGroupName = "Ambiance";
 
     private float timeRemaining;
     private bool matchOver;
+    private bool resultShown;
+    private bool isPaused;
+    private readonly List<PlayerInput> pausedInputs = new List<PlayerInput>();
     private int latestPlayerScore;
     private int latestComScore;
 
     public bool IsMatchOver => matchOver;
+    public bool IsPaused => isPaused;
+    public string ScoreLine => $"Score: Player {(playerTeam != null ? playerTeam.Score : 0)} - {(comTeam != null ? comTeam.Score : 0)} COM";
 
     void Awake()
     {
@@ -47,6 +59,8 @@ public class Game : MonoBehaviour
         timeRemaining = matchDuration;
         if (resultText != null)
             resultText.gameObject.SetActive(false);
+        if (pausePanel != null)
+            pausePanel.SetActive(false);
         UpdateTimerUI();
     }
 
@@ -64,6 +78,8 @@ public class Game : MonoBehaviour
 
         Vector3 spawnPos = template.transform.position + template.transform.right * lateralOffset;
         GameObject clone = Instantiate(template, spawnPos, template.transform.rotation);
+        // Distinct names so debug logs can tell the teammates apart (they'd all be "<template>(Clone)").
+        clone.name = $"{template.name} {(lateralOffset < 0f ? "Left" : "Right")}";
 
         AITeammate ai = clone.GetComponent<AITeammate>();
         if (ai != null)
@@ -89,9 +105,20 @@ public class Game : MonoBehaviour
 
     void Update()
     {
+        // AudioListener.volume survives scene reloads, so mute stays on after a restart.
+        if (Keyboard.current != null && Keyboard.current.mKey.wasPressedThisFrame)
+            AudioListener.volume = AudioListener.volume > 0f ? 0f : 1f;
+
+        if (!matchOver && Keyboard.current != null &&
+            (Keyboard.current.pKey.wasPressedThisFrame || Keyboard.current.escapeKey.wasPressedThisFrame))
+            SetPaused(!isPaused);
+
+        if (isPaused) return;
+
         if (matchOver)
         {
-            if (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
+            // Restart only once the "Press R to restart" prompt is actually on screen.
+            if (resultShown && Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
                 SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
             return;
         }
@@ -129,6 +156,28 @@ public class Game : MonoBehaviour
     void EndMatch()
     {
         matchOver = true;
+        StartCoroutine(ShowResultWhenGoalTextClears());
+    }
+
+    // A match-winning goal is still animating its goal text, so hold the result until it's gone.
+    IEnumerator ShowResultWhenGoalTextClears()
+    {
+        Goal[] goals = FindObjectsByType<Goal>(FindObjectsSortMode.None);
+        bool waitedForGoalText = false;
+        while (System.Array.Exists(goals, g => g.IsShowingGoalText))
+        {
+            waitedForGoalText = true;
+            yield return null;
+        }
+        if (waitedForGoalText)
+            yield return new WaitForSeconds(resultDelayAfterGoal);
+
+        ShowResult();
+    }
+
+    void ShowResult()
+    {
+        resultShown = true;
         if (resultText == null) return;
         resultText.gameObject.SetActive(true);
         string outcome;
@@ -139,6 +188,61 @@ public class Game : MonoBehaviour
         else
             outcome = "Draw!";
         resultText.text = outcome + "\n<size=60%>Press R to restart</size>";
+    }
+
+    void SetPaused(bool paused)
+    {
+        isPaused = paused;
+        Time.timeScale = paused ? 0f : 1f;
+        if (pausePanel != null)
+            pausePanel.SetActive(paused);
+
+        // Pauses every AudioSource except the ambient ones, which opt out via ignoreListenerPause.
+        if (paused)
+        {
+            foreach (AudioSource source in FindObjectsByType<AudioSource>(FindObjectsSortMode.None))
+            {
+                var group = source.outputAudioMixerGroup;
+                source.ignoreListenerPause = group != null && group.name == ambientGroupName;
+            }
+        }
+        AudioListener.pause = paused;
+
+        if (paused)
+        {
+            // Stop reading gameplay input so the camera/player can't move while frozen.
+            pausedInputs.Clear();
+            foreach (PlayerInput playerInput in FindObjectsByType<PlayerInput>(FindObjectsSortMode.None))
+            {
+                if (!playerInput.enabled || !playerInput.inputIsActive) continue;
+                playerInput.DeactivateInput();
+                pausedInputs.Add(playerInput);
+                StarterAssetsInputs input = playerInput.GetComponent<StarterAssetsInputs>();
+                if (input != null)
+                {
+                    input.move = Vector2.zero;
+                    input.look = Vector2.zero;
+                    input.jump = input.sprint = input.shoot = input.pass = input.switchPlayer = false;
+                }
+            }
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
+        else
+        {
+            foreach (PlayerInput playerInput in pausedInputs)
+                if (playerInput != null) playerInput.ActivateInput();
+            pausedInputs.Clear();
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+        }
+    }
+
+    void OnDestroy()
+    {
+        // Don't leak a frozen timescale / paused audio into a reloaded scene.
+        Time.timeScale = 1f;
+        AudioListener.pause = false;
     }
 
     public void ResetAfterGoal()

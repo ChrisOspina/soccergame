@@ -22,6 +22,13 @@ public class Player : MonoBehaviour
     public float passForce = 8f;
     public float shootForce = 20f;
 
+    [Tooltip("Seconds a player can't move, tackle, or pick up the ball after a missed tackle")]
+    public float missedTackleStun = 0.6f;
+    private float stunnedUntil = -1f;
+    public bool IsStunned => Time.time < stunnedUntil;
+
+    public string DebugName => team != null ? $"{name} [{team.side}]" : name;
+
     public AudioMixer mixer;
     AudioSource src;
 
@@ -168,6 +175,18 @@ public class Player : MonoBehaviour
         transform.position = startPos;
         lastPosition = startPos;
         controller.enabled = true;
+    }
+
+    // Returns what happened so callers (the AI) can react; a miss leaves this player briefly stunned.
+    public Ball.TackleResult Tackle()
+    {
+        Ball ball = Game.Instance != null ? Game.Instance.ball : null;
+        if (ball == null || ballAttachedToPlayer != null || IsStunned) return Ball.TackleResult.NoAttempt;
+
+        Ball.TackleResult result = ball.TryTackle(this);
+        if (result == Ball.TackleResult.Missed)
+            stunnedUntil = Time.time + missedTackleStun;
+        return result;
     }
 
     public void Shoot()
