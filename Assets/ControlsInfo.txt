@@ -1,0 +1,29 @@
+CONTROLS
+
+MOVEMENT
+Move ............... W A S D / Arrow Keys
+Camera ............. Mouse
+
+ON THE BALL
+Shoot .............. Left Click / Space
+Pass ............... Right Click
+
+DEFENDING
+Tackle ............. Left Click / Space (near the ball carrier)
+Call for Pass ...... Right Click (when a teammate has the ball)
+Switch Player ...... Tab
+
+GAME
+Pause / Resume ..... P / Esc
+Mute / Unmute ...... M
+Restart ............ R (when the match is over)
+
+HOW TO WIN
+Matches last 3 minutes.
+First team to 5 goals wins.
+If time runs out, the team with the most goals wins.
+Level scores at full time end in a draw.
+
+TIPS
+Tackle from the front - tackles from behind usually fail.
+A missed tackle leaves you frozen for a moment, so time it well.

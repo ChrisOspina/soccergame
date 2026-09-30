@@ -4,60 +4,79 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A third-person soccer/FIFA game prototype built in **Unity 6 (6000.3.6f1)** using URP, Cinemachine, and the new Input System. The game features ball dribbling, shooting, goal detection, scoring, and audio mixing.
+A third-person 3v3 arcade soccer game (player team vs COM) built in **Unity 6 (6000.3.6f1)** using URP, Cinemachine, and the new Input System. Features dribbling, passing, shooting, tackling, AI teammates/opponents, a match clock with goal limit, pause/mute, and audio mixing.
 
 ## Development Environment
 
 - **Unity Version:** 6000.3.6f1
 - **Render Pipeline:** Universal Render Pipeline (URP 17.3.0)
 - **Key Packages:** Input System v1.18.0, Cinemachine v2.10.5, TextMesh Pro, AI Navigation
-- **Main Scene:** `Assets/Scenes/SampleScene.unity`
+- **Active Input Handling:** Input System only — the legacy `Input.GetKey*` API throws at runtime. Use `Keyboard.current` / `PlayerInput`.
 
 There are no CLI build commands — build and run through the Unity Editor (File > Build Settings, or press Play to test in editor).
 
+### Scenes (`Assets/Scenes/`)
+
+- **`MainMenu.unity`** — title screen (`MainMenu.cs`: Space → `Scene1`, Esc → `ControlsInfo`)
+- **`ControlsInfo.unity`** — controls/instructions screen; text source is `Assets/ControlsInfo.txt`
+- **`Scene1.unity`** — the match (formerly `SampleScene.unity`)
+
+Scenes loaded by name via `SceneManager.LoadScene` must be listed in Build Settings.
+
 ## Architecture
 
-### Script Dependency Chain
+### Script Overview
 
 ```
-StarterAssetsInputs (input abstraction)
-    └── ThirdPersonController (movement, camera, animation)
-    └── Player (shooting, scoring, audio, UI)
-            └── Ball (physics, attachment, respawn)
-            └── Goal (trigger detection, score callbacks)
+Game (singleton: match clock, goal limit, result, pause/mute, spawns teammates)
+  ├── TeamController ×2 (Player / COM side: members, score, goals, passing, player switching)
+  │     └── Player (per character: ball carry, shoot, pass, tackle, dribble audio)
+  │           ├── HumanPlayer  (reads StarterAssetsInputs; enabled on the controlled character only)
+  │           └── AITeammate   (drives every non-controlled character on both teams)
+  ├── Ball (attachment, pickup, tackles/steals, respawn)
+  └── Goal ×2 (trigger → TeamController.AddGoal, goal text animation)
 ```
 
 ### Core Scripts (`Assets/Scripts/`)
 
-**`Ball.cs`** — Ball physics and player attachment
-- Auto-attaches to player when within 2.0 units
-- Ball follows transform child `"Geometry/BallLocation"` on the player
-- Rotates based on movement speed; respawns if `y < -2`
-- Exposes `StickToPlayer` bool; notifies `Player` script when attached
+**`Game.cs`** — Match controller (`Game.Instance`)
+- Spawns 2 extra teammates per side by cloning `playerTemplate` / `comTemplate` (clones named `<template> Left/Right`)
+- Match clock (`matchDuration`) and `goalLimit`; `EndMatch()` shows result text only after any goal text has cleared + `resultDelayAfterGoal`; R restarts once the result is shown
+- Pause (P / Esc): `Time.timeScale = 0`, toggles `pausePanel`, `AudioListener.pause` (sources on the `Ambiance` mixer group keep playing via `ignoreListenerPause`), deactivates `PlayerInput`
+- Mute (M): toggles `AudioListener.volume` (persists across scene reloads)
 
-**`Player.cs`** — Central game controller
-- Reads `StarterAssetsInputs.shoot` (left mouse button) each frame
-- Shooting: plays "Shoot" animation on Animator layer 1, applies 20-unit impulse force at 0.2s delay with a 0.2y arc offset
-- Tracks both player score and COM (opponent) score; updates TextMeshPro UI
-- Manages 4-channel AudioMixer (master, music, SFX, ambient)
-- Plays dribble SFX every 1 unit of distance traveled with ball attached
-- `IncreaseMyScore()` / `IncreaseOtherScore()` are called by Goal.cs
+**`TeamController.cs`** — One per side (`TeamSide.Player` / `TeamSide.COM`); holds members, score + score UI, goal sound, pass-target selection, and switching the human-controlled character (moves `PlayerInput`, camera, `HumanPlayer`).
 
-**`Goal.cs`** — Goal zone trigger and celebration
-- Uses `OnTriggerEnter` with tag `"Ball"` to detect goals
-- Two goals in scene: `"Goal1"` (player scores) and `"Goal2"` (COM scores)
-- Runs a coroutine that scales goal text from 0.5→1.5 and fades it over 3 seconds
-- Calls `Player.IncreaseMyScore()` or `Player.IncreaseOtherScore()` accordingly
+**`Player.cs`** — Per-character actions
+- `Shoot()` plays "Shoot" on Animator layer 1, kicks after 0.2s with `shootForce` and a 0.2y arc; `Pass()` / `PassTo()` with `passForce`
+- `Tackle()` → `Ball.TryTackle`; a miss stuns for `missedTackleStun` (`IsStunned`)
+- Looping dribble SFX while carrying and moving
+- `DebugName` = `name [side]` for logs
+
+**`HumanPlayer.cs`** — Shoot button shoots with the ball, tackles without it; pass button passes or calls for a pass; switch button changes controlled player. Locks `ThirdPersonController.MovementLocked` while stunned.
+
+**`AITeammate.cs`** — Formation positioning, chasing the ball/carrier, shooting within `shootRange`, passing under pressure. Speed = human sprint × `humanSpeedMultiplier` (read once in `Start`).
+
+**`Ball.cs`** — Ball carry and possession
+- Auto-attaches to the nearest non-stunned player within `pickupRadius` (after a 0.5s reattach delay)
+- Automatic steal: an opponent within `tackleRadius` takes the ball after `tackleProtection`; `retackleDelay` stops ping-pong
+- Button tackle (`TryTackle`): within `tackleReach`, success chance by angle (front / side / behind)
+- Follows `"Geometry/BallLocation"` on the carrier; kinematic while carried; respawns if `y < -2`
+- `Carrier`, `LastTouchedBy` (for goal credit); logs `STEAL:` to the console
+
+**`Goal.cs`** — Trigger on tag `"Ball"` → `scoringTeam.AddGoal()`, animates goal text (scale 0.5→1.5, fade over 3s), logs `GOAL` / `OWN GOAL` with the scorer, then `Game.ResetAfterGoal()` after 1.5s.
+
+**`MainMenu.cs`** — Menu scene key handling. `StuckDebugger.cs` is a temporary diagnostic added to every Player; `FieldBoundary.cs` respawns the ball when it leaves the field trigger.
 
 ### Input Layer (`Assets/StarterAssets/InputSystem/`)
 
-**`StarterAssetsInputs.cs`** — Wraps New Input System callbacks into plain C# properties (`move`, `look`, `jump`, `sprint`, `shoot`). The `shoot` action was added for this project and is not part of the original Starter Assets.
+**`StarterAssetsInputs.cs`** — Wraps Input System callbacks into plain fields (`move`, `look`, `jump`, `sprint`, `shoot`, `pass`, `switchPlayer`). `shoot`, `pass`, and `switchPlayer` were added for this project.
 
-**`StarterAssets.inputactions`** — Input binding asset. Keyboard: WASD/arrows, mouse delta, Space, Left Shift, Left Mouse. Gamepad: left stick, right stick, South button, left trigger.
+**`StarterAssets.inputactions`** — Keyboard/mouse: WASD/arrows move, mouse look, Left Click / Space shoot, Right Click pass, Tab switch. Gamepad: sticks, South = jump, Right Trigger = pass, West = switch (no gamepad shoot binding yet).
 
 ### Movement (`Assets/StarterAssets/ThirdPersonController/Scripts/`)
 
-**`ThirdPersonController.cs`** — Uses `CharacterController` (not Rigidbody) for movement. Walk speed: 2.0 m/s, sprint: 5.335 m/s. Custom gravity: -15.0. Jump height: 1.2m. Grounded check via sphere cast.
+**`ThirdPersonController.cs`** — `CharacterController`-based movement for the controlled character. Always runs at `SprintSpeed` (5.335 m/s); gravity -15, jump height 1.2m. `MovementLocked` (set by `HumanPlayer`) freezes movement without dropping held input.
 
 ### Mobile Support (`Assets/StarterAssets/Mobile/Scripts/`)
 
@@ -65,8 +84,9 @@ Virtual joystick, button, and touch zone components relay input to `StarterAsset
 
 ## Key Scene Setup Notes
 
-- The soccer ball must have the tag `"Ball"` for goal detection to work
-- Goal trigger colliders must reference the `Player` component via `Goal.cs` inspector fields
-- The `Player` script expects an `Animator` with a second layer (index 1) for the shoot animation
-- Ball respawn position is the ball's initial position at scene load (`startPos` captured in `Start()`)
-- The AudioMixer must be assigned in the Player inspector for sound to work (known issue: mixer was broken as of commit `6544d5a`)
+- The soccer ball must have the tag `"Ball"` for goal detection
+- Each `Goal` needs its `scoringTeam` (TeamController) and `goalText` assigned
+- `Game` needs `ball`, `playerTeam`, `comTeam`, `playerTemplate`, `comTemplate`, `timerText`, `resultText`, and `pausePanel`
+- Characters need an `Animator` with a second layer (index 1) for the shoot animation
+- Ball respawn position is the ball's position at scene load
+- AudioMixer: `Assets/Audio/NewAudioMixer.mixer` with groups Master / Music / SFX / Ambiance and exposed params `volume_master`, `volume_music`, `volume_sfx`, `volume_ambient`
